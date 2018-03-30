@@ -3,7 +3,7 @@
     "proxies": {
         "any": {
             "matchCondition": {
-                "route": "/{*any}"
+                "route": "{*any}"
             },
             "backendUri": "%HOST_NAME%/{any}"
         }
