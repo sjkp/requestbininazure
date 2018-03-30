@@ -1,11 +1,11 @@
 {
     "$schema": "http://json.schemastore.org/proxies",
     "proxies": {
-        "Any": {
+        "any": {
             "matchCondition": {
-                "route": "{*any}"
+                "route": "/{*any}"
             },
-            "backendUri": "%HOST_NAME%"
+            "backendUri": "%HOST_NAME%/{any}"
         }
     }
 }

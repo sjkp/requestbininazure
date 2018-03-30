@@ -1,0 +1,260 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "name": {
+            "type": "string",
+            "metadata": {
+                "description": "Name for the container group"
+            },
+            "defaultValue": "sjkprequestbin2"
+        },
+        "name2": {
+            "type": "string",
+            "metadata": {
+                "description": "Name for the container group"
+            },
+            "defaultValue": "sjkpredis"
+        },
+        "environment": {
+            "type": "string",
+            "metadata": {
+                "description": "Environment container is running in"
+            },
+            "defaultValue": "staging",
+            "allowedValues": [
+                "dev",
+                "staging",
+                "production"
+            ]
+        },
+        "tier": {
+            "type": "string",
+            "metadata": {
+                "description": "tier"
+            },
+            "defaultValue": "3",
+            "allowedValues": [
+                "1",
+                "2",
+                "3"
+            ]
+        },
+        "image": {
+            "type": "string",
+            "metadata": {
+                "description": "Container image to deploy. Should be of the form accountName/imagename:tag for images stored in Docker Hub or a fully qualified URI for a private registry like the Azure Container Registry."
+            },
+            "defaultValue": "crccheck/requestbin"
+        },
+        "image2": {
+            "type": "string",
+            "metadata": {
+                "description": "Container image to deploy. Should be of the form accountName/imagename:tag for images stored in Docker Hub or a fully qualified URI for a private registry like the Azure Container Registry."
+            },
+            "defaultValue": "redis"
+        },
+        
+
+        "cpuCores": {
+            "type": "string",
+            "metadata": {
+                "description": "The number of CPU cores to allocate to the container. Must be an integer."
+            },
+            "defaultValue": "1"
+        },
+        "memoryInGb": {
+            "type": "string",
+            "metadata": {
+                "description": "The amount of memory to allocate to the container in gigabytes."
+            },
+            "defaultValue": "1.5"
+        },
+        "osType": {
+            "allowedValues": [
+                "Linux",
+                "Windows"
+            ],
+            "defaultValue": "Linux",
+            "type": "string"
+        },
+        "storageAccountType": {
+            "type": "string",
+            "defaultValue": "Standard_LRS",
+            "allowedValues": [
+              "Standard_LRS",
+              "Standard_GRS",
+              "Standard_ZRS",
+              "Premium_LRS"
+            ],
+            "metadata": {
+              "description": "Storage Account type"
+            }
+          },
+          "repoURL": {
+            "type": "string",
+            "defaultValue": "https://github.com/sjkp/requestbininazure.git"
+          },
+          "branch":{
+              "type": "string",
+              "defaultValue": "master"
+          }
+    },
+    "variables": {
+        "cores": "[int(parameters('cpuCores'))]",
+        "memory": "[float(parameters('memoryInGb'))]",
+        "servicePlanName": "[concat('servicePlan', uniqueString(resourceGroup().id))]",
+        "storageAccountName": "[concat('storage', uniqueString(resourceGroup().id))]",
+        "dynamicAppServicePlanName": "[concat('dynamic', uniqueString(resourceGroup().id))]"
+    },
+    "resources": [
+        {
+            "type": "Microsoft.Storage/storageAccounts",
+            "name": "[variables('storageAccountName')]",
+            "apiVersion": "2015-06-15",
+            "location": "[resourceGroup().location]",
+            "properties": {
+              "accountType": "[parameters('storageAccountType')]"
+            }
+          },
+          {
+            "type": "Microsoft.Web/serverfarms",
+            "apiVersion": "2015-04-01",
+            "name": "[variables('dynamicAppServicePlanName')]",
+            "location": "[resourceGroup().location]",
+            "properties": {
+              "name": "[variables('dynamicAppServicePlanName')]",
+              "computeMode": "Dynamic",
+              "sku": "Dynamic"
+            }
+          },
+          {
+            "apiVersion": "2015-08-01",
+            "type": "Microsoft.Web/sites",
+            "name": "[parameters('name')]",
+            "location": "[resourceGroup().location]",
+            "kind": "functionapp",
+            "properties": {
+              "name": "[parameters('name')]",
+              "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', variables('dynamicAppServicePlanName'))]"
+            },
+            "dependsOn": [
+              "[resourceId('Microsoft.Web/serverfarms', variables('dynamicAppServicePlanName'))]",
+              "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]"
+            ],
+            "resources": [        
+              {
+                "apiVersion": "2016-03-01",
+                "name": "appsettings",
+                "type": "config",
+                "dependsOn": [
+                  "[resourceId('Microsoft.Web/sites', parameters('name'))]",
+                  "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]"
+                ],
+                "properties": {
+                  "AzureWebJobsStorage": "[concat('DefaultEndpointsProtocol=https;AccountName=',variables('storageAccountName'),';AccountKey=',listkeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')), '2015-05-01-preview').key1,';')]",
+                  "AzureWebJobsDashboard": "[concat('DefaultEndpointsProtocol=https;AccountName=',variables('storageAccountName'),';AccountKey=',listkeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')), '2015-05-01-preview').key1,';')]",
+                  "FUNCTIONS_EXTENSION_VERSION": "latest",
+                  "HOST_NAME": "[concat('http://', parameters('name'), '.westeurope.azurecontainer.io')]"
+                }
+              },
+              {
+                "apiVersion": "2015-08-01",
+                "name": "web",
+                "type": "sourcecontrols",
+                "dependsOn": [
+                    "[resourceId('Microsoft.Web/Sites', parameters('name'))]"
+                ],
+                "properties": {
+                    "RepoUrl": "[parameters('repoURL')]",
+                    "branch": "[parameters('branch')]",
+                    "IsManualIntegration": true
+                }
+                }     
+            ]
+          },
+        {
+            "name": "[parameters('name')]",
+            "type": "Microsoft.ContainerInstance/containerGroups",
+            "apiVersion": "2018-02-01-preview",
+            "location": "[resourceGroup().location]",
+            "properties": {
+                "restartPolicy": "always",
+                "osType": "[parameters('osType')]",
+                "containers": [
+                    {
+                        "name": "[parameters('name')]",
+                        "properties": {
+                            "image": "[parameters('image')]",
+                            "ports": [
+                                {
+                                    "port": "8000"
+                                },
+                                {
+                                    "port": "80"
+                                }
+                            ],
+                            "environmentVariables": [
+                                {
+                                    "name": "ENV",
+                                    "value": "[parameters('environment')]"
+                                },
+                                {
+                                    "name": "TIER",
+                                    "value": "[parameters('tier')]"
+                                },
+                                {
+                                    "name": "REDIS_URL",
+                                    "value": "[concat('redis://127.0.0.1:6379/0')]"                                   
+                                }
+                            ],
+                            "resources": {
+                                "requests": {
+                                    "cpu": "[variables('cores')]",
+                                    "memoryInGb": "[variables('memory')]"
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "name": "[parameters('name2')]",
+                        "properties": {
+                            "image": "[parameters('image2')]",
+                            "ports": [
+                                {
+                                    "port": "6379"
+                                }                               
+                            ],
+                            "environmentVariables": [
+                                {
+                                    "name": "ENV",
+                                    "value": "[parameters('environment')]"
+                                },
+                                {
+                                    "name": "TIER",
+                                    "value": "[parameters('tier')]"
+                                }
+                            ],
+                            "resources": {
+                                "requests": {
+                                    "cpu": "[variables('cores')]",
+                                    "memoryInGb": "[variables('memory')]"
+                                }
+                            }
+                        }
+                    }
+                ],
+                "ipAddress": {
+                    "type": "Public",
+                    "dnsNameLabel": "[parameters('name')]",
+                    "ports": [
+                        {
+                            "protocol": "tcp",
+                            "port": "80"
+                        }
+                    ]
+                }
+            }
+        }
+    ]
+}
