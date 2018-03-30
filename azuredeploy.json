@@ -7,7 +7,7 @@
             "metadata": {
                 "description": "Name for the container group"
             },
-            "defaultValue": "sjkprequestbin2"
+            "defaultValue": "sjkprequestbin4"
         },
         "name2": {
             "type": "string",
@@ -68,7 +68,7 @@
             "metadata": {
                 "description": "The amount of memory to allocate to the container in gigabytes."
             },
-            "defaultValue": "1.5"
+            "defaultValue": "1"
         },
         "osType": {
             "allowedValues": [
@@ -256,5 +256,11 @@
                 }
             }
         }
-    ]
+    ],
+    "outputs": {
+        "url": {
+            "type": "string",
+            "value": "[concat('https://', parameters('name'), '.azurewebsites.net')]"
+        }
+    }
 }

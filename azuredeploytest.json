@@ -1,0 +1,105 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+      "storageAccountType": {
+        "type": "string",
+        "defaultValue": "Standard_LRS",
+        "allowedValues": [
+          "Standard_LRS",
+          "Standard_GRS",
+          "Standard_ZRS",
+          "Premium_LRS"
+        ],
+        "metadata": {
+          "description": "Storage Account type"
+        }
+      },   
+      "functionAppName": {
+        "type": "string",
+        "defaultValue": "sjkptestfunction"
+      },
+      "repoURL": {
+        "type": "string",
+        "defaultValue": "https://github.com/sjkp/requestbininazure.git"
+      },
+      "branch":{
+          "type": "string",
+          "defaultValue": "master"
+      }
+    },
+    "variables": {
+      "servicePlanName": "[concat('servicePlan', uniqueString(resourceGroup().id))]",
+      "storageAccountName": "[concat('storage', uniqueString(resourceGroup().id))]",
+      "dynamicAppServicePlanName": "[concat('dynamic', uniqueString(resourceGroup().id))]"
+    },
+    "resources": [
+      {
+        "type": "Microsoft.Storage/storageAccounts",
+        "name": "[variables('storageAccountName')]",
+        "apiVersion": "2015-06-15",
+        "location": "[resourceGroup().location]",
+        "properties": {
+          "accountType": "[parameters('storageAccountType')]"
+        }
+      },
+      {
+        "type": "Microsoft.Web/serverfarms",
+        "apiVersion": "2015-04-01",
+        "name": "[variables('dynamicAppServicePlanName')]",
+        "location": "[resourceGroup().location]",
+        "properties": {
+          "name": "[variables('dynamicAppServicePlanName')]",
+          "computeMode": "Dynamic",
+          "sku": "Dynamic"
+        }
+      },
+      {
+        "apiVersion": "2015-08-01",
+        "type": "Microsoft.Web/sites",
+        "name": "[parameters('functionAppName')]",
+        "location": "[resourceGroup().location]",
+        "kind": "functionapp",
+        "properties": {
+          "name": "[parameters('functionAppName')]",
+          "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', variables('dynamicAppServicePlanName'))]"
+        },
+        "dependsOn": [
+          "[resourceId('Microsoft.Web/serverfarms', variables('dynamicAppServicePlanName'))]",
+          "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]"
+        ],
+        "resources": [        
+          {
+            "apiVersion": "2016-03-01",
+            "name": "appsettings",
+            "type": "config",
+            "dependsOn": [
+              "[resourceId('Microsoft.Web/sites', parameters('functionAppName'))]",
+              "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]"
+            ],
+            "properties": {
+              "AzureWebJobsStorage": "[concat('DefaultEndpointsProtocol=https;AccountName=',variables('storageAccountName'),';AccountKey=',listkeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')), '2015-05-01-preview').key1,';')]",
+              "AzureWebJobsDashboard": "[concat('DefaultEndpointsProtocol=https;AccountName=',variables('storageAccountName'),';AccountKey=',listkeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')), '2015-05-01-preview').key1,';')]",
+              "FUNCTIONS_EXTENSION_VERSION": "latest",
+              "HOST_NAME": "https://www.dr.dk"
+            }
+          },
+          {
+			"apiVersion": "2015-08-01",
+			"name": "web",
+			"type": "sourcecontrols",
+			"dependsOn": [
+				"[resourceId('Microsoft.Web/Sites', parameters('functionAppName'))]"
+			],
+			"properties": {
+				"RepoUrl": "[parameters('repoURL')]",
+				"branch": "[parameters('branch')]",
+				"IsManualIntegration": true
+			}
+		    }     
+        ]
+      }
+    ],
+    "outputs": {
+    }
+  }
