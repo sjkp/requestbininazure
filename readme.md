@@ -18,3 +18,5 @@ Running the request bin site on Azure have the following costs associated with i
 * Total cost ~ 3 $ / day 
 
 In other words don't let it run 24x7 if you want to do that you are better off installing it in a VM or on Kubernetes. 
+
+<b>After deploying you can find your requestbin site at the ipaddress found under the container group in the resource group used when deploying</b>
