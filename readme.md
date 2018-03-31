@@ -18,3 +18,9 @@ Running the request bin site on Azure have the following costs associated with i
 * Total cost ~ 3 $ / day 
 
 In other words don't let it run 24x7 if you want to do that you are better off installing it in a VM or on Kubernetes. 
+
+## Accessing the site
+After the template deployment is complete you can access requestbin site using the following urls: 
+
+* If you need https, you have to use `https://<name-specified-during-deployment>.azurewebsites.net`
+* You can also access it using the ACI domain at `http://<name-specified-during-deployment>.<regionname-of-resourcegroup>.azurecontainer.io` where `<regionname-of-resourcegroup>` e.g. could be `westeurope` if you created the resource group in that region. Note this URL doesn't support https, as that is yet to come for ACI, which is why I included the azure function reverse proxy in the template, as you most likely need https. 
