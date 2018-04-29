@@ -155,7 +155,7 @@
                   "AzureWebJobsStorage": "[concat('DefaultEndpointsProtocol=https;AccountName=',variables('storageAccountName'),';AccountKey=',listkeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')), '2015-05-01-preview').key1,';')]",
                   "AzureWebJobsDashboard": "[concat('DefaultEndpointsProtocol=https;AccountName=',variables('storageAccountName'),';AccountKey=',listkeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')), '2015-05-01-preview').key1,';')]",
                   "FUNCTIONS_EXTENSION_VERSION": "latest",
-                  "HOST_NAME": "[concat('http://', parameters('name'), '.westeurope.azurecontainer.io')]"
+                  "HOST_NAME": "[concat('http://', parameters('name'), '.', resourceGroup().location, '.azurecontainer.io')]"
                 }
               },
               {
