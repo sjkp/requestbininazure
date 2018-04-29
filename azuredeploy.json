@@ -93,6 +93,9 @@
           },
           "repoURL": {
             "type": "string",
+            "metadata": {
+                "description": "Source for the function app that proxies https traffic."
+            },
             "defaultValue": "https://github.com/sjkp/requestbininazure.git"
           },
           "branch":{
